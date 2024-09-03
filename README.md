@@ -17,3 +17,5 @@ It has 10 Different features.
 
 The User has to Register with name , memberid inorder to borrow book, return book.
 I intially gave Four Books to the memory, user can add , remove or seach book with isbn number.
+
+Due date is automatically generated when borrowed book with 14 days due.
