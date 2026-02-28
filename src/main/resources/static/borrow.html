@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Borrow/Return - Library System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="navbar">
+    <h2>📚 Library Management System</h2>
+    <div class="navbar-right">
+        <span id="welcomeMsg"></span>
+        <button class="logout-btn" onclick="logout()">
+            🚪 Logout
+        </button>
+    </div>
+</div>
+
+<div class="layout">
+    <div class="sidebar">
+        <a href="dashboard.html"><span>🏠</span> Dashboard</a>
+        <a href="books.html"><span>📖</span> Books</a>
+        <a href="members.html"><span>👥</span> Members</a>
+        <a href="borrow.html" class="active">
+            <span>🔄</span> Borrow/Return
+        </a>
+    </div>
+
+    <div class="main-content">
+        <div class="page-title">🔄 Borrow / Return System</div>
+
+        <div id="alertMsg" class="alert"></div>
+
+        <!-- Issue Book Section -->
+        <div class="table-container" style="margin-bottom:25px;">
+            <div class="table-header">
+                <h3>📤 Issue Book</h3>
+            </div>
+            <div style="display:grid;
+                            grid-template-columns: 1fr 1fr auto;
+                            gap:15px;
+                            align-items:end;">
+                <div class="form-group" style="margin:0">
+                    <label>Select Member</label>
+                    <select id="memberSelect">
+                        <option value="">-- Select Member --</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label>Select Book</label>
+                    <select id="bookSelect">
+                        <option value="">-- Select Book --</option>
+                    </select>
+                </div>
+                <button class="btn btn-success"
+                        onclick="issueBook()">
+                    📤 Issue Book
+                </button>
+            </div>
+        </div>
+
+        <!-- Active Borrows Table -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3>📋 Active Borrows</h3>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-info btn-sm"
+                            onclick="loadActiveBorrows()">
+                        🔄 Refresh
+                    </button>
+                    <button class="btn btn-warning btn-sm"
+                            onclick="loadOverdue()">
+                        ⚠️ Show Overdue
+                    </button>
+                    <button class="btn btn-success btn-sm"
+                            onclick="loadAllBorrows()">
+                        📋 Show All
+                    </button>
+                </div>
+            </div>
+            <table>
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Member</th>
+                    <th>Book</th>
+                    <th>Borrow Date</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th>Fine (₹)</th>
+                    <th>Action</th>
+                </tr>
+                </thead>
+                <tbody id="borrowTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API = 'http://localhost:8080';
+
+    window.onload = function() {
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user) {
+            window.location.href = 'index.html';
+            return;
+        }
+        document.getElementById('welcomeMsg').textContent =
+            `Welcome, ${user.fullName}!`;
+        loadDropdowns();
+        loadActiveBorrows();
+    }
+
+    // Load members and books into dropdowns
+    async function loadDropdowns() {
+        try {
+            // Load members
+            const membersRes = await fetch(`${API}/api/members`);
+            const members = await membersRes.json();
+            const memberSelect = document.getElementById('memberSelect');
+            members.forEach(m => {
+                if (m.status === 'ACTIVE') {
+                    const option = document.createElement('option');
+                    option.value = m.id;
+                    option.textContent =
+                        `${m.firstName} ${m.lastName} (${m.membershipId})`;
+                    memberSelect.appendChild(option);
+                }
+            });
+
+            // Load available books
+            const booksRes = await fetch(`${API}/api/books`);
+            const books = await booksRes.json();
+            const bookSelect = document.getElementById('bookSelect');
+            books.forEach(b => {
+                if (b.availableQuantity > 0) {
+                    const option = document.createElement('option');
+                    option.value = b.id;
+                    option.textContent =
+                        `${b.title} (Available: ${b.availableQuantity})`;
+                    bookSelect.appendChild(option);
+                }
+            });
+        } catch (error) {
+            showAlert('Error loading data!', 'danger');
+        }
+    }
+
+    // Issue book
+    async function issueBook() {
+        const memberId = document.getElementById('memberSelect').value;
+        const bookId = document.getElementById('bookSelect').value;
+
+        if (!memberId || !bookId) {
+            showAlert('Please select both member and book!', 'danger');
+            return;
+        }
+
+        try {
+            const res = await fetch(
+                `${API}/api/borrow/issue?memberId=${memberId}&bookId=${bookId}`,
+                { method: 'POST' }
+            );
+
+            const data = await res.json();
+
+            if (res.ok) {
+                showAlert(
+                    `Book issued successfully! Due date: ${data.dueDate}`,
+                    'success'
+                );
+                loadActiveBorrows();
+                // Refresh dropdowns
+                document.getElementById('memberSelect').innerHTML =
+                    '<option value="">-- Select Member --</option>';
+                document.getElementById('bookSelect').innerHTML =
+                    '<option value="">-- Select Book --</option>';
+                loadDropdowns();
+            } else {
+                showAlert(data || 'Error issuing book!', 'danger');
+            }
+        } catch (error) {
+            showAlert('Connection error!', 'danger');
+        }
+    }
+
+    // Return book
+    async function returnBook(borrowRecordId) {
+        if (!confirm('Confirm book return?')) return;
+
+        try {
+            const res = await fetch(
+                `${API}/api/borrow/return/${borrowRecordId}`,
+                { method: 'PUT' }
+            );
+
+            const data = await res.json();
+
+            if (res.ok) {
+                let msg = 'Book returned successfully!';
+                if (data.fineAmount > 0) {
+                    msg += ` Fine: ₹${data.fineAmount}`;
+                }
+                showAlert(msg, 'success');
+                loadActiveBorrows();
+                // Refresh dropdowns
+                document.getElementById('memberSelect').innerHTML =
+                    '<option value="">-- Select Member --</option>';
+                document.getElementById('bookSelect').innerHTML =
+                    '<option value="">-- Select Book --</option>';
+                loadDropdowns();
+            } else {
+                showAlert(data || 'Error returning book!', 'danger');
+            }
+        } catch (error) {
+            showAlert('Connection error!', 'danger');
+        }
+    }
+
+    // Load active borrows
+    async function loadActiveBorrows() {
+        try {
+            const res = await fetch(`${API}/api/borrow/active`);
+            const borrows = await res.json();
+            renderBorrowTable(borrows, 'Active Borrows');
+        } catch (error) {
+            showAlert('Error loading borrows!', 'danger');
+        }
+    }
+
+    // Load overdue
+    async function loadOverdue() {
+        try {
+            const res = await fetch(`${API}/api/borrow/overdue`);
+            const borrows = await res.json();
+            renderBorrowTable(borrows, 'Overdue Books');
+        } catch (error) {
+            showAlert('Error loading overdue!', 'danger');
+        }
+    }
+
+    // Load all borrows
+    async function loadAllBorrows() {
+        try {
+            const res = await fetch(`${API}/api/borrow`);
+            const borrows = await res.json();
+            renderBorrowTable(borrows, 'All Borrow Records');
+        } catch (error) {
+            showAlert('Error loading borrows!', 'danger');
+        }
+    }
+
+    function renderBorrowTable(borrows) {
+        const tbody = document.getElementById('borrowTable');
+
+        if (borrows.length === 0) {
+            tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8"
+                            style="text-align:center; color:#999;">
+                            No records found!
+                        </td>
+                    </tr>`;
+            return;
+        }
+
+        tbody.innerHTML = borrows.map((b, i) => {
+            const isOverdue = new Date(b.dueDate) < new Date() &&
+                b.status === 'BORROWED';
+            return `
+                <tr style="${isOverdue ? 'background:#fff8f8;' : ''}">
+                    <td>${i + 1}</td>
+                    <td>${b.member.firstName} ${b.member.lastName}</td>
+                    <td>${b.book.title}</td>
+                    <td>${b.borrowDate}</td>
+                    <td style="color:${isOverdue ? '#c62828' : 'inherit'}">
+                        ${b.dueDate}
+                        ${isOverdue ? '⚠️' : ''}
+                    </td>
+                    <td>
+                        <span class="badge ${getStatusBadge(b.status)}">
+                            ${b.status}
+                        </span>
+                    </td>
+                    <td>₹${b.fineAmount || 0}</td>
+                    <td>
+                        ${b.status === 'BORROWED' ? `
+                            <button class="btn btn-success btn-sm"
+                                    onclick="returnBook(${b.id})">
+                                📥 Return
+                            </button>
+                        ` : `
+                            <span class="badge badge-success">
+                                ✓ Returned
+                            </span>
+                        `}
+                    </td>
+                </tr>`;
+        }).join('');
+    }
+
+    function getStatusBadge(status) {
+        const badges = {
+            'BORROWED': 'badge-info',
+            'RETURNED': 'badge-success',
+            'OVERDUE': 'badge-danger'
+        };
+        return badges[status] || 'badge-info';
+    }
+
+    function showAlert(message, type) {
+        const alert = document.getElementById('alertMsg');
+        alert.textContent = message;
+        alert.className = `alert alert-${type} show`;
+        setTimeout(() => alert.classList.remove('show'), 4000);
+    }
+
+    function logout() {
+        localStorage.removeItem('user');
+        window.location.href = 'index.html';
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Library System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+    <h2>📚 Library Management System</h2>
+    <div class="navbar-right">
+        <span id="welcomeMsg">Welcome, Admin!</span>
+        <button class="logout-btn" onclick="logout()">
+            🚪 Logout
+        </button>
+    </div>
+</div>
+
+<!-- Layout -->
+<div class="layout">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <a href="dashboard.html" class="active">
+            <span>🏠</span> Dashboard
+        </a>
+        <a href="books.html">
+            <span>📖</span> Books
+        </a>
+        <a href="members.html">
+            <span>👥</span> Members
+        </a>
+        <a href="borrow.html">
+            <span>🔄</span> Borrow/Return
+        </a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="page-title">📊 Dashboard</div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card blue">
+                <div class="icon">📚</div>
+                <div class="number" id="totalBooks">0</div>
+                <div class="label">Total Books</div>
+            </div>
+            <div class="stat-card green">
+                <div class="icon">👥</div>
+                <div class="number" id="totalMembers">0</div>
+                <div class="label">Total Members</div>
+            </div>
+            <div class="stat-card orange">
+                <div class="icon">🔄</div>
+                <div class="number" id="activeBorrows">0</div>
+                <div class="label">Active Borrows</div>
+            </div>
+            <div class="stat-card red">
+                <div class="icon">⚠️</div>
+                <div class="number" id="overdueBooks">0</div>
+                <div class="label">Overdue Books</div>
+            </div>
+        </div>
+
+        <!-- Recent Borrows Table -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3>📋 Recent Borrow Records</h3>
+            </div>
+            <table>
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Member</th>
+                    <th>Book</th>
+                    <th>Borrow Date</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody id="borrowTable">
+                <tr>
+                    <td colspan="6"
+                        style="text-align:center; color:#999;">
+                        Loading...
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API = 'http://localhost:8080';
+
+    // Check login
+    window.onload = function() {
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user) {
+            window.location.href = 'index.html';
+            return;
+        }
+        document.getElementById('welcomeMsg').textContent =
+            `Welcome, ${user.fullName}!`;
+        loadDashboard();
+    }
+
+    async function loadDashboard() {
+        try {
+            // Load books count
+            const books = await fetch(`${API}/api/books`);
+            const booksData = await books.json();
+            document.getElementById('totalBooks').textContent =
+                booksData.length;
+
+            // Load members count
+            const members = await fetch(`${API}/api/members`);
+            const membersData = await members.json();
+            document.getElementById('totalMembers').textContent =
+                membersData.length;
+
+            // Load active borrows
+            const borrows = await fetch(`${API}/api/borrow/active`);
+            const borrowsData = await borrows.json();
+            document.getElementById('activeBorrows').textContent =
+                borrowsData.length;
+
+            // Load overdue
+            const overdue = await fetch(`${API}/api/borrow/overdue`);
+            const overdueData = await overdue.json();
+            document.getElementById('overdueBooks').textContent =
+                overdueData.length;
+
+            // Load all borrows for table
+            const allBorrows = await fetch(`${API}/api/borrow`);
+            const allBorrowsData = await allBorrows.json();
+            renderBorrowTable(allBorrowsData.slice(0, 10));
+
+        } catch (error) {
+            console.error('Error loading dashboard:', error);
+        }
+    }
+
+    function renderBorrowTable(borrows) {
+        const tbody = document.getElementById('borrowTable');
+        if (borrows.length === 0) {
+            tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6"
+                            style="text-align:center; color:#999;">
+                            No borrow records found
+                        </td>
+                    </tr>`;
+            return;
+        }
+
+        tbody.innerHTML = borrows.map((b, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td>${b.member.firstName} ${b.member.lastName}</td>
+                    <td>${b.book.title}</td>
+                    <td>${b.borrowDate}</td>
+                    <td>${b.dueDate}</td>
+                    <td>
+                        <span class="badge ${getStatusBadge(b.status)}">
+                            ${b.status}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+    }
+
+    function getStatusBadge(status) {
+        const badges = {
+            'BORROWED': 'badge-info',
+            'RETURNED': 'badge-success',
+            'OVERDUE': 'badge-danger'
+        };
+        return badges[status] || 'badge-info';
+    }
+
+    function logout() {
+        localStorage.removeItem('user');
+        window.location.href = 'index.html';
+    }
+</script>
+</body>
+</html>
