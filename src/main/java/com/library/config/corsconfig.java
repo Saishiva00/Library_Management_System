@@ -9,11 +9,14 @@ public class corsconfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
-                .allowedOrigins("http://localhost:8080",
-                        "http://localhost:3000",
-                        "https://library-management-system-saishiva.netlify.app/" )
+        registry.addMapping("/**")
+                .allowedOrigins(
+                        "https://librarymanagementsystem-saishiva.netlify.app",
+                        "http://localhost:8080",
+                        "http://localhost:3000"
+                )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("*");
+                .allowedHeaders("*")
+                .allowCredentials(false);
     }
 }
