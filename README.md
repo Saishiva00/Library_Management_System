@@ -306,19 +306,19 @@ GET /api/borrow/overdue
 ## 📸 Screenshots
 
 ### Login Page
-![Login](screenshots/login.png)
+![Login](LMS_Screenshots/login.png)
 
 ### Dashboard
-![Dashboard](screenshots/dashboard.png)
+![Dashboard](LMS_Screenshots/Dashboard.png)
 
 ### Books Management
-![Books](screenshots/books.png)
+![Books](LMS_Screenshots/Books.png)
 
 ### Member Management
-![Members](screenshots/members.png)
+![Members](LMS_Screenshots/Members.png)
 
 ### Borrow System
-![Borrow](screenshots/borrow.png)
+![Borrow](LMS_Screenshots/Borrow.png)
 
 ---
 
