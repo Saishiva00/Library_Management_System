@@ -10,7 +10,7 @@
 
 **A production-ready Full Stack Library Management System**
 
-[🔴 Live Demo](#) · [📖 API Docs](#api-documentation) · [🐛 Report Bug](issues) · [✨ Request Feature](issues)
+[🔴 Live Demo](https://librarymanagementsystem-saishiva.netlify.app/) · [📖 API Docs](#api-documentation) · [🐛 Report Bug](issues) · [✨ Request Feature](issues)
 
 </div>
 
