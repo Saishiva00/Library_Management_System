@@ -13,7 +13,8 @@ public class corsconfig implements WebMvcConfigurer {
                 .allowedOrigins(
                         "https://librarymanagementsystem-saishiva.netlify.app",
                         "http://localhost:8080",
-                        "http://localhost:3000"
+                        "http://localhost:3000",
+                        "https://library-management-system-r6iq.onrender.com"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
